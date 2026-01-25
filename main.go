@@ -13,6 +13,36 @@ import (
 	"trailcall/handlers"
 )
 
+// loadEnv loads environment variables from a .env file
+func loadEnv() {
+	f, err := os.Open(".env")
+	if err != nil {
+		return // Ignore if file doesn't exist
+	}
+	defer f.Close()
+
+	var lines []string
+	b, err := os.ReadFile(".env")
+	if err == nil {
+		lines = strings.Split(string(b), "\n")
+	}
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			val := strings.TrimSpace(parts[1])
+			// Remove quotes if present
+			val = strings.Trim(val, `"'`)
+			os.Setenv(key, val)
+		}
+	}
+}
+
 // handleRSVPRoutes handles /api/rsvps/{id}/checkin
 func handleRSVPRoutes(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/rsvps/")
@@ -41,6 +71,7 @@ func handleRSVPRoutes(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	loadEnv()
 	// Parse flags
 	genHash := flag.String("gen-hash", "", "Generate bcrypt hash for a PIN")
 	port := flag.Int("port", 2468, "Port to listen on")
