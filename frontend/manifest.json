@@ -1,0 +1,20 @@
+{
+    "name": "TrailCall - Hiking Club Check-in",
+    "short_name": "TrailCall",
+    "description": "Hiking club attendance tracking using QR code scanning",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f5f5f5",
+    "theme_color": "#2d5016",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "https://centurionhikingclub.co.za/wp-content/uploads/2023/02/CHC-logo-2-white-1024x1024-1.jpg",
+            "sizes": "1024x1024",
+            "type": "image/jpeg",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["utilities", "sports"],
+    "lang": "en-ZA"
+}

@@ -1,0 +1,22 @@
+[Unit]
+Description=TrailCall - Hiking Club Attendance Tracker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/trailcall
+ExecStart=/opt/trailcall/trailcall
+Restart=always
+RestartSec=5
+
+# Environment file for secrets (create this on the server)
+EnvironmentFile=/opt/trailcall/.env
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/trailcall
+
+[Install]
+WantedBy=multi-user.target

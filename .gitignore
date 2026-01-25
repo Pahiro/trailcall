@@ -1,0 +1,14 @@
+# Binaries
+trailcall
+trailcall-linux-*
+
+# Databases
+*.db
+*.db-journal
+
+# Environment
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
