@@ -214,6 +214,17 @@ main {
     cursor: not-allowed;
 }
 
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-light);
+}
+
+.btn-outline:hover {
+    background: var(--bg);
+    color: var(--text);
+}
+
 /* Forms */
 .form-group {
     margin-bottom: 16px;
@@ -280,6 +291,10 @@ main {
 .list-item-title {
     font-weight: 500;
     margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .list-item-subtitle {
@@ -302,6 +317,25 @@ main {
 
 .list-item-badge.closed {
     background: var(--text-light);
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-accent {
+    background: var(--accent);
+    color: var(--text);
+}
+
+.badge-secondary {
+    background: #6c757d;
+    color: white;
 }
 
 /* Scanner */

@@ -219,7 +219,30 @@ const App = {
 
     async closeCurrentHike() {
         if (!this.currentHike) return;
-        if (!confirm(`Close "${this.currentHike.name}"? This cannot be undone.`)) return;
+
+        let warningMsg = '';
+        try {
+            // Check for leaders/sweepers before closing
+            const checkins = await API.getHikeCheckins(this.currentHike.id);
+            const hasLeader = checkins.some(c => c.is_leader);
+            const hasSweeper = checkins.some(c => c.is_sweeper);
+
+            if (!hasLeader || !hasSweeper) {
+                warningMsg = '\n\n⚠️ WARNING: ';
+                if (!hasLeader && !hasSweeper) {
+                    warningMsg += 'No Trail Leader and no Trail Sweeper have been assigned.';
+                } else if (!hasLeader) {
+                    warningMsg += 'No Trail Leader has been assigned.';
+                } else {
+                    warningMsg += 'No Trail Sweeper has been assigned.';
+                }
+                warningMsg += ' This data is required for year-end awards.';
+            }
+        } catch (e) {
+            console.error('Failed to pre-check roles:', e);
+        }
+
+        if (!confirm(`Close "${this.currentHike.name}"? This cannot be undone.${warningMsg}`)) return;
 
         try {
             await API.closeHike(this.currentHike.id);
@@ -469,12 +492,12 @@ const App = {
     async handleScan(code) {
         const resultDiv = document.getElementById('scan-result');
 
-        // Validate TC-### format
-        if (!code.match(/^TC-\d+$/)) {
+        // Validate code is not empty
+        if (!code || code.trim() === '') {
             resultDiv.innerHTML = `
                 <div class="scan-result error">
                     <h3>Invalid Code</h3>
-                    <p>${code}</p>
+                    <p>Empty or invalid code scanned</p>
                 </div>
             `;
             return;
@@ -646,6 +669,7 @@ const App = {
             const detail = await API.getHike(hikeId);
             const hike = detail.hike;
             const attendees = detail.attendees;
+            const checkins = await API.getHikeCheckins(hikeId);
 
             let rsvps = [];
             try {
@@ -751,9 +775,14 @@ const App = {
                                     <div class="list-item-title">${r.member_name || r.guest_name}</div>
                                     <div class="list-item-subtitle">${r.membership_number || 'Guest'}</div>
                                 </div>
-                                <button class="btn btn-small btn-primary" onclick="App.checkinRSVP(${r.id}, ${hikeId})" style="margin-left: auto;">
-                                    Check In
-                                </button>
+                                <div class="button-group" style="margin-left: auto; display: flex; gap: 8px;">
+                                    <button class="btn btn-small btn-secondary" onclick="App.removeRSVP(${r.id}, ${hikeId})">
+                                        Remove
+                                    </button>
+                                    <button class="btn btn-small btn-primary" onclick="App.checkinRSVP(${r.id}, ${hikeId})">
+                                        Check In
+                                    </button>
+                                </div>
                             </li>
                         `).join('')}
                     </ul>
@@ -763,22 +792,42 @@ const App = {
                 <div class="card">
                     <h3>Checked in (${attendees.length}${checkedInGuests.length > 0 ? ' + ' + checkedInGuests.length + ' guests' : ''})</h3>
                     <ul class="list">
-                        ${attendees.length === 0 && checkedInGuests.length === 0 ? '<li class="empty-state">No attendees yet</li>' : ''}
-                        ${attendees.map(m => {
-                const rsvp = rsvps.find(r => r.member_id === m.id);
-                return `
-                            <li class="list-item">
-                                <div class="list-item-content" onclick="window.location.hash='#member-history/${m.id}'" style="cursor: pointer;">
-                                    <div class="list-item-title">${m.first_name} ${m.last_name}</div>
-                                    <div class="list-item-subtitle">${m.membership_number}</div>
-                                </div>
-                                ${rsvp ? `
-                                    <button class="btn btn-small btn-secondary" onclick="App.undoCheckinRSVP(${rsvp.id}, ${hikeId})" title="Undo check-in">
-                                        Undo
-                                    </button>
-                                ` : '<span>👋 Walk-in</span>'}
-                            </li>
-                        `}).join('')}
+                        ${(() => {
+                    const checkinMap = new Map(checkins.map(c => [c.member_id, c]));
+                    return attendees.map(m => {
+                        const rsvp = rsvps.find(r => r.member_id === m.id);
+                        const checkin = checkinMap.get(m.id);
+                        return `
+                                <li class="list-item">
+                                    <div class="list-item-content" onclick="window.location.hash='#member-history/${m.id}'" style="cursor: pointer;">
+                                        <div class="list-item-title">
+                                            ${m.first_name} ${m.last_name}
+                                            ${checkin && checkin.is_leader ? '<span class="badge badge-accent">Leader</span>' : ''}
+                                            ${checkin && checkin.is_sweeper ? '<span class="badge badge-secondary">Sweeper</span>' : ''}
+                                        </div>
+                                        <div class="list-item-subtitle">${m.membership_number}</div>
+                                    </div>
+                                    <div class="button-group" style="display: flex; gap: 4px;">
+                                        ${checkin ? `
+                                            <button class="btn btn-small ${checkin.is_leader ? 'btn-accent' : 'btn-outline'}" 
+                                                    onclick="App.toggleCheckinRole(${checkin.id}, 'leader', ${checkin.is_leader}, ${hikeId})" title="Toggle Leader">
+                                                L
+                                            </button>
+                                            <button class="btn btn-small ${checkin.is_sweeper ? 'btn-secondary' : 'btn-outline'}" 
+                                                    onclick="App.toggleCheckinRole(${checkin.id}, 'sweeper', ${checkin.is_sweeper}, ${hikeId})" title="Toggle Sweeper">
+                                                S
+                                            </button>
+                                        ` : ''}
+                                        ${rsvp ? `
+                                            <button class="btn btn-small btn-secondary" onclick="App.undoCheckinRSVP(${rsvp.id}, ${hikeId})" title="Undo check-in">
+                                                Undo
+                                            </button>
+                                        ` : '<span>👋 Walk-in</span>'}
+                                    </div>
+                                </li>
+                            `;
+                    }).join('');
+                })()}
                         ${checkedInGuests.map(r => `
                             <li class="list-item">
                                 <div class="list-item-content">
@@ -816,6 +865,27 @@ const App = {
             this.renderAttendance(hikeId);
         } catch (err) {
             Toast.show(err.message || 'Undo failed', 'error');
+        }
+    },
+
+    async toggleCheckinRole(checkinId, role, currentValue, hikeId) {
+        try {
+            await API.updateCheckinRole(checkinId, role, !currentValue);
+            Toast.show(`Member set as Trail ${role.charAt(0).toUpperCase() + role.slice(1)}`, 'success');
+            this.renderAttendance(hikeId);
+        } catch (err) {
+            Toast.show(err.message || 'Failed to update role', 'error');
+        }
+    },
+
+    async removeRSVP(rsvpId, hikeId) {
+        if (!confirm('Remove this RSVP?')) return;
+        try {
+            await API.deleteRSVP(rsvpId);
+            Toast.show('RSVP removed', 'success');
+            this.renderAttendance(hikeId);
+        } catch (err) {
+            Toast.show(err.message || 'Failed to remove RSVP', 'error');
         }
     },
 
@@ -1140,7 +1210,7 @@ const App = {
                 <form id="new-member-form">
                     <div class="form-group">
                         <label for="membership-number">Membership Number *</label>
-                        <input type="text" id="membership-number" required placeholder="TC-001">
+                        <input type="text" id="membership-number" required placeholder="e.g., TC-001 or CHC-001">
                     </div>
                     <div class="form-group">
                         <label for="first-name">First Name *</label>

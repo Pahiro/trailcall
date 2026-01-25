@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"trailcall/db"
@@ -14,6 +15,11 @@ func HandleCheckins(w http.ResponseWriter, r *http.Request) {
 
 	if path == "/bulk" || path == "/bulk/" {
 		handleBulkCheckin(w, r)
+		return
+	}
+
+	if strings.HasSuffix(path, "/role") {
+		HandleCheckinRole(w, r)
 		return
 	}
 
@@ -90,4 +96,43 @@ func handleBulkCheckin(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 	}
 	json.NewEncoder(w).Encode(response)
+}
+
+// HandleCheckinRole toggles a role for a check-in
+func HandleCheckinRole(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from path: /api/checkins/{id}/role
+	path := strings.TrimPrefix(r.URL.Path, "/api/checkins/")
+	parts := strings.Split(path, "/")
+	if len(parts) < 2 {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	checkinID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Role  string `json:"role"`
+		Value bool   `json:"value"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if err := db.UpdateCheckinRole(checkinID, req.Role, req.Value); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -65,6 +65,9 @@ func handleRSVPRoutes(w http.ResponseWriter, r *http.Request) {
 	case "undo":
 		handlers.HandleRSVPUndoCheckin(w, r, rsvpID)
 		return
+	case "delete":
+		handlers.HandleDeleteRSVP(w, r, rsvpID)
+		return
 	}
 
 	http.Error(w, "Not found", http.StatusNotFound)

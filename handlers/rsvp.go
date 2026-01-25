@@ -221,3 +221,18 @@ func HandleRSVPUndoCheckin(w http.ResponseWriter, r *http.Request, rsvpID int64)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
+
+// HandleDeleteRSVP deletes an RSVP record
+func HandleDeleteRSVP(w http.ResponseWriter, r *http.Request, rsvpID int64) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := db.DeleteRSVP(rsvpID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

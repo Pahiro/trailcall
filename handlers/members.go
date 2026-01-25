@@ -146,7 +146,7 @@ func generateQR(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 
-	// Generate QR code with membership number (e.g., "TC-001")
+	// Generate QR code with membership number (e.g., "TC-001" or "CHC-001")
 	png, err := qrcode.Encode(member.MembershipNumber, qrcode.Medium, 256)
 	if err != nil {
 		http.Error(w, "Failed to generate QR code", http.StatusInternalServerError)

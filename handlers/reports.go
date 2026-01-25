@@ -170,7 +170,16 @@ func exportHikeAttendanceCSV(w http.ResponseWriter, r *http.Request, hikeID int6
 		if len(nameParts) >= 2 {
 			lastName = nameParts[1]
 		}
-		writer.Write([]string{c.MembershipNumber, firstName, lastName, "Member", activityStr})
+
+		typeStr := "Member"
+		if c.IsLeader {
+			typeStr += " (Leader)"
+		}
+		if c.IsSweeper {
+			typeStr += " (Sweeper)"
+		}
+
+		writer.Write([]string{c.MembershipNumber, firstName, lastName, typeStr, activityStr})
 	}
 
 	// Data - guests

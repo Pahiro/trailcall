@@ -133,6 +133,10 @@ const API = {
         return this.request('POST', '/checkins/bulk', { checkins });
     },
 
+    async updateCheckinRole(checkinId, role, value) {
+        return this.request('POST', `/checkins/${checkinId}/role`, { role, value });
+    },
+
     // Reports
     async getMemberHistory(id) {
         return this.request('GET', `/reports/member/${id}`);
@@ -178,6 +182,10 @@ const API = {
 
     async undoCheckinRSVP(rsvpId) {
         return this.request('POST', `/rsvps/${rsvpId}/undo`);
+    },
+
+    async deleteRSVP(rsvpId) {
+        return this.request('DELETE', `/rsvps/${rsvpId}/delete`);
     },
 
     // Activities

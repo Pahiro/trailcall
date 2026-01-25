@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -114,6 +115,9 @@ func migrate() error {
 	DB.Exec("ALTER TABLE hikes ADD COLUMN rsvp_open INTEGER DEFAULT 1")
 	// Add checked_in_at column to rsvps table for guest check-ins
 	DB.Exec("ALTER TABLE rsvps ADD COLUMN checked_in_at DATETIME")
+	// Add is_leader and is_sweeper columns to checkins table
+	DB.Exec("ALTER TABLE checkins ADD COLUMN is_leader INTEGER DEFAULT 0")
+	DB.Exec("ALTER TABLE checkins ADD COLUMN is_sweeper INTEGER DEFAULT 0")
 
 	return nil
 }
@@ -421,6 +425,7 @@ func UndoRSVPCheckin(rsvpID int64) error {
 func GetCheckinsForHike(hikeID int64) ([]models.Checkin, error) {
 	rows, err := DB.Query(`
 		SELECT c.id, c.hike_id, c.member_id, c.checked_in_at, c.synced,
+		       c.is_leader, c.is_sweeper,
 		       m.first_name || ' ' || m.last_name as member_name, m.membership_number
 		FROM checkins c
 		JOIN members m ON c.member_id = m.id
@@ -435,13 +440,34 @@ func GetCheckinsForHike(hikeID int64) ([]models.Checkin, error) {
 	var checkins []models.Checkin
 	for rows.Next() {
 		var c models.Checkin
-		err := rows.Scan(&c.ID, &c.HikeID, &c.MemberID, &c.CheckedInAt, &c.Synced, &c.MemberName, &c.MembershipNumber)
+		err := rows.Scan(&c.ID, &c.HikeID, &c.MemberID, &c.CheckedInAt, &c.Synced, &c.IsLeader, &c.IsSweeper, &c.MemberName, &c.MembershipNumber)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan error at row: %w", err)
 		}
 		checkins = append(checkins, c)
 	}
 	return checkins, nil
+}
+
+// UpdateCheckinRole toggles a role for a check-in
+func UpdateCheckinRole(checkinID int64, role string, value bool) error {
+	column := ""
+	if role == "leader" {
+		column = "is_leader"
+	} else if role == "sweeper" {
+		column = "is_sweeper"
+	} else {
+		return fmt.Errorf("invalid role: %s", role)
+	}
+
+	val := 0
+	if value {
+		val = 1
+	}
+
+	query := fmt.Sprintf("UPDATE checkins SET %s = ? WHERE id = ?", column)
+	_, err := DB.Exec(query, val, checkinID)
+	return err
 }
 
 func GetAttendeesForHike(hikeID int64) ([]models.Member, error) {
@@ -545,6 +571,11 @@ func CreateRSVPForGuest(hikeID int64, guestName string) error {
 		"INSERT OR IGNORE INTO rsvps (hike_id, guest_name) VALUES (?, ?)",
 		hikeID, guestName,
 	)
+	return err
+}
+
+func DeleteRSVP(id int64) error {
+	_, err := DB.Exec("DELETE FROM rsvps WHERE id = ?", id)
 	return err
 }
 
