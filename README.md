@@ -32,9 +32,17 @@ TrailCall is a lightweight Progressive Web App (PWA) designed for hiking club at
    go build -o trailcall
    ```
 3. Set up your `.env` file with a `PIN` for authentication.
-4. Run the application:
+   ```bash
+   ./trailcall -gen-hash 1234
+   ```
+   TRAILCALL_PIN_HASH='$2a$10$S4qGazNiHlgYkRDL5XQMgusrPdkZsKYuMByDyBZX3Ysp7KlxdqBQu'
+5. Run the application:
    ```bash
    ./trailcall
+   ```
+6. To reset the database after testing:
+   ```bash
+   ./trailcall -reset-db
    ```
 
 ## Usage
